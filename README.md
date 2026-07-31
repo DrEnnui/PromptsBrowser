@@ -3,23 +3,31 @@ Prompts Browser Extension for the [AUTOMATIC1111/stable-diffusion-webui](https:/
 
 ## Table of Contents
 
-1. [Installation](#installation)
-1. [Known Prompts Browser](#known-prompts-browser)
-1. [Active Prompts](#active-prompts)
-1. [Active prompts groups](#active-prompts-groups)
-1. [Adding new prompts to the collection](#adding-new-prompts-to-the-collection)
-1. [Generating previews for prompts](#generating-previews-for-prompts)
-1. [Prompt tools](#prompt-tools)
-1. [Styles](#styles)
-1. [Collection editor](#collection-editor)
-1. [Prompt editor](#prompt-editor)
-1. [New Collection window](#new-collection-window)
-1. [Autocomplete](#autocomplete)
-1. [Normalize](#normalize)
-1. [Setup window](#setup-window)
-1. [Collections database](#collections-database)
-1. [Development](#development)
-1. [Credits](#credits)
+- [Prompts Browser Extension 1.4.0](#prompts-browser-extension-140)
+  - [Table of Contents](#table-of-contents)
+    - [Changes in 1.4.0](#changes-in-140)
+      - [Full React Rewrite.](#full-react-rewrite)
+      - [Some other changes:](#some-other-changes)
+    - [Changes in 1.3.0](#changes-in-130)
+  - [Installation:](#installation)
+    - [Important](#important)
+  - [Usage:](#usage)
+    - [Known Prompts Browser](#known-prompts-browser)
+    - [Active Prompts](#active-prompts)
+    - [Active prompts groups](#active-prompts-groups)
+    - [Adding new prompts to the collection](#adding-new-prompts-to-the-collection)
+    - [Generating previews for prompts](#generating-previews-for-prompts)
+    - [Prompt tools](#prompt-tools)
+    - [Styles](#styles)
+    - [Collection editor](#collection-editor)
+    - [Prompt editor](#prompt-editor)
+    - [New Collection window](#new-collection-window)
+    - [Autocomplete](#autocomplete)
+    - [Normalize](#normalize)
+    - [Setup window](#setup-window)
+    - [Collections database](#collections-database)
+    - [Development](#development)
+    - [Credits](#credits)
 
 ![](img/preview.jpg)
 
@@ -86,7 +94,7 @@ This extension modifies the DOM directly, without working through any API for su
 
 3. `Shift + click`: opens prompt edition window.
 
-5. `Ctrl/Meta + click`: opens the dialog of removing the prompt from the collection (it will be lost).
+4. `Ctrl/Meta + click`: opens the dialog of removing the prompt from the collection (it will be lost).
 
 5. Prompts in the collection can be moved by drag and drop.
 
