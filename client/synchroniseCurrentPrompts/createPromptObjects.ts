@@ -3,7 +3,16 @@ import { DEFAULT_PROMPT_WEIGHT } from "client/const";
 import { normalizePrompt, promptStringToObject} from "client/utils/index";
 import Prompt, { PromptEntity } from "clientTypes/prompt";
 import ConfigManager from 'client/managers/Config'
+import tokenizePrompt, {PromptToken} from './tokenizePrompt';
 
+
+function appendSeparator(activePrompts: PromptEntity[], separator: string, pendingSeparator: {value: string}) {
+    if(!separator) return;
+
+    const previous = activePrompts[activePrompts.length - 1];
+    if(previous) previous.separatorAfter = (previous.separatorAfter || "") + separator;
+    else pendingSeparator.value += separator;
+}
 
 export default function createPromptObjects({value, activePrompts, groupId, nestingLevel = 0, normalize = false}: {
     value: string;
@@ -14,50 +23,26 @@ export default function createPromptObjects({value, activePrompts, groupId, nest
 }) {
     const {data} = Database;
     const {supportExtendedSyntax = true} = ConfigManager.getConfig();
-    const KEEP_SYNTAX_SYMBOLS = ["{", "}", "|"];
-    const DELIMITER_CHAR = ",";
-    const SPACE_CHAR = " ";
-    let prompts: string[] = [];
+    const pendingSeparator = {value: ""};
+    const tokens: PromptToken[] = tokenizePrompt(value, supportExtendedSyntax);
 
-    if(supportExtendedSyntax) {
-        prompts = value.split(/([,{}|])/g);
-        prompts = prompts.filter(strItem => strItem);
-    
-        prompts = prompts.map((strItem, i, arr) => {
-            if(typeof strItem !== "string") return strItem;
-    
-            let trimStr = strItem.trim();
-            if(KEEP_SYNTAX_SYMBOLS.includes(trimStr)) {
-                const prevItem = i > 0 ? arr[i - 1] : "";
-                const nextItem = arr[i + 1];
-    
-                if(prevItem && prevItem[prevItem.length - 1] === SPACE_CHAR) strItem = SPACE_CHAR + strItem;
-                if(nextItem && nextItem[0] === SPACE_CHAR) strItem += SPACE_CHAR;
-            }
-            
-            return strItem;
-        });
-    
-        prompts = prompts.filter(strItem => strItem && strItem.trim());
+    for(const token of tokens) {
+        if(token.type === "separator") {
+            appendSeparator(activePrompts, token.value, pendingSeparator);
+            continue;
+        }
 
-    } else {
-        prompts = value.split(",");
-        prompts = prompts.filter(strItem => strItem && strItem.trim());
-        
-    }
-
-    for(let i = 0; i < prompts.length; i++) {
-        let promptItem = prompts[i];
-        if(!promptItem) continue;
-
-        if(!promptItem || promptItem === ",") continue;
-
-        const {id, weight, isExternalNetwork, isSyntax = false, nestedWeight} = promptStringToObject({prompt: promptItem, nestedWeight: 0});
+        let promptItem = token.value;
+        const {id, weight, isExternalNetwork, isSyntax = false} = promptStringToObject({prompt: promptItem, nestedWeight: 0});
         if(!id) continue;
 
         promptItem = id;
 
-        if(normalize && !isExternalNetwork && !isSyntax) promptItem = normalizePrompt({prompt: promptItem, data});
+        const isBreak = token.type === "syntax" && token.value.trim() === "BREAK";
+        const isExtendedSyntax = token.type === "syntax" && !isBreak;
+        const syntax = isSyntax || token.type === "syntax";
+
+        if(normalize && !isExternalNetwork && !syntax) promptItem = normalizePrompt({prompt: promptItem, data});
 
         const targetItem: Prompt = {
             id: promptItem,
@@ -65,23 +50,26 @@ export default function createPromptObjects({value, activePrompts, groupId, nest
             weight: weight !== undefined ? weight : DEFAULT_PROMPT_WEIGHT
         }
 
+        if(pendingSeparator.value) {
+            targetItem.separatorBefore = pendingSeparator.value;
+            pendingSeparator.value = "";
+        }
+
         if(isExternalNetwork) targetItem.isExternalNetwork = true;
 
-        /**
-         * If it is a syntax token - also checking if it needs delimiters on its sides in a string.
-         */
-        if(isSyntax) {
-            const prevItem = i > 0 ? prompts[i - 1] : "";
-            const nextItem = prompts[i + 1];
-
+        if(syntax) {
             targetItem.isSyntax = true;
-            targetItem.delimiter = "none";
 
-            if(prevItem === DELIMITER_CHAR && nextItem === DELIMITER_CHAR) targetItem.delimiter = "both";
-            else if(prevItem === DELIMITER_CHAR) targetItem.delimiter = "prev";
-            else if(nextItem === DELIMITER_CHAR) targetItem.delimiter = "next";
+            // Braces and alternation bars are structural syntax and should stay
+            // joined to their neighbours. BREAK is a standalone visual entry;
+            // its original surrounding whitespace/newlines are preserved by
+            // separatorBefore/separatorAfter.
+            if(isExtendedSyntax) targetItem.delimiter = "none";
         }
 
         activePrompts.push(targetItem);
     }
+
+    // Preserve a separator-only tail such as the final period in "bird.".
+    if(pendingSeparator.value) appendSeparator(activePrompts, pendingSeparator.value, {value: ""});
 }

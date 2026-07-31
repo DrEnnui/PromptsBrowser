@@ -9805,85 +9805,236 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 
 /***/ }),
 
+/***/ "./client/synchroniseCurrentPrompts/tokenizePrompt.ts":
+/*!**************************************************************!*
+  !*** ./client/synchroniseCurrentPrompts/tokenizePrompt.ts ***!
+  \**************************************************************/
+/***/ ((module, exports, __webpack_require__) => {
+
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", ({ value: true }));
+    const EXTENDED_SYNTAX = new Set(["{", "}", "|"]);
+    const ALWAYS_SEPARATORS = new Set([",", ";", "，", "；"]);
+    const SENTENCE_SEPARATORS = new Set([".", "!", "?", "。", "！", "？"]);
+    const HORIZONTAL_WHITESPACE = /[ \f\v]/;
+    const WORD_CHAR = /[A-Za-z0-9_]/;
+    function isLineSeparator(char) {
+        return char === "\r" || char === "\n" || char === "\t";
+    }
+    function isSentenceSeparator(value, index) {
+        const char = value.charAt(index);
+        if (!SENTENCE_SEPARATORS.has(char))
+            return false;
+        const nextChar = value.charAt(index + 1);
+        if (!nextChar)
+            return true;
+        if (SENTENCE_SEPARATORS.has(nextChar))
+            return true;
+        return /\s/.test(nextChar);
+    }
+    function isPromptSeparator(value, index) {
+        const char = value.charAt(index);
+        return ALWAYS_SEPARATORS.has(char) || isLineSeparator(char) || isSentenceSeparator(value, index);
+    }
+    function isStandaloneBreak(value, index) {
+        if (value.substring(index, index + 5) !== "BREAK")
+            return false;
+        const prevChar = index > 0 ? value.charAt(index - 1) : "";
+        const nextChar = value.charAt(index + 5);
+        if (prevChar && WORD_CHAR.test(prevChar))
+            return false;
+        if (nextChar && WORD_CHAR.test(nextChar))
+            return false;
+        return true;
+    }
+    function pushToken(tokens, type, value) {
+        if (!value)
+            return;
+        const previous = tokens[tokens.length - 1];
+        if (previous && previous.type === type && type === "separator") {
+            previous.value += value;
+            return;
+        }
+        tokens.push({ type, value });
+    }
+    function splitTrailingWhitespace(value) {
+        const match = value.match(/[ \f\v]+$/);
+        if (!match)
+            return { body: value, whitespace: "" };
+        return {
+            body: value.substring(0, value.length - match[0].length),
+            whitespace: match[0],
+        };
+    }
+    function tokenizePrompt(value, supportExtendedSyntax = true) {
+        const tokens = [];
+        let buffer = "";
+        let roundDepth = 0;
+        let squareDepth = 0;
+        let angleDepth = 0;
+        let escaped = false;
+        const atTopLevel = () => roundDepth === 0 && squareDepth === 0 && angleDepth === 0;
+        const flushBuffer = (moveTrailingWhitespace = false) => {
+            if (!buffer)
+                return "";
+            let promptValue = buffer;
+            let trailingWhitespace = "";
+            if (moveTrailingWhitespace) {
+                const split = splitTrailingWhitespace(buffer);
+                promptValue = split.body;
+                trailingWhitespace = split.whitespace;
+            }
+            if (promptValue.trim())
+                pushToken(tokens, "prompt", promptValue);
+            else
+                trailingWhitespace = buffer;
+            buffer = "";
+            return trailingWhitespace;
+        };
+        for (let index = 0; index < value.length; index++) {
+            const char = value.charAt(index);
+            if (escaped) {
+                buffer += char;
+                escaped = false;
+                continue;
+            }
+            if (char === "\\") {
+                buffer += char;
+                escaped = true;
+                continue;
+            }
+            if (char === "<")
+                angleDepth++;
+            else if (char === ">" && angleDepth > 0)
+                angleDepth--;
+            else if (angleDepth === 0) {
+                if (char === "[")
+                    squareDepth++;
+                else if (char === "]" && squareDepth > 0)
+                    squareDepth--;
+                else if (squareDepth === 0) {
+                    if (char === "(")
+                        roundDepth++;
+                    else if (char === ")" && roundDepth > 0)
+                        roundDepth--;
+                }
+            }
+            if (supportExtendedSyntax && atTopLevel() && EXTENDED_SYNTAX.has(char)) {
+                const leadingWhitespace = flushBuffer(true);
+                let syntaxValue = leadingWhitespace + char;
+                while (index + 1 < value.length && HORIZONTAL_WHITESPACE.test(value.charAt(index + 1))) {
+                    syntaxValue += value.charAt(++index);
+                }
+                pushToken(tokens, "syntax", syntaxValue);
+                continue;
+            }
+            if (atTopLevel() && isStandaloneBreak(value, index)) {
+                const leadingWhitespace = flushBuffer(true);
+                pushToken(tokens, "separator", leadingWhitespace);
+                pushToken(tokens, "syntax", "BREAK");
+                index += 4;
+                let followingWhitespace = "";
+                while (index + 1 < value.length && /\s/.test(value.charAt(index + 1))) {
+                    followingWhitespace += value.charAt(++index);
+                }
+                pushToken(tokens, "separator", followingWhitespace);
+                continue;
+            }
+            if (atTopLevel() && isPromptSeparator(value, index)) {
+                let separator = flushBuffer(true) + char;
+                while (index + 1 < value.length) {
+                    const nextIndex = index + 1;
+                    const nextChar = value.charAt(nextIndex);
+                    if (/\s/.test(nextChar)) {
+                        separator += nextChar;
+                        index++;
+                        continue;
+                    }
+                    if (isPromptSeparator(value, nextIndex)) {
+                        separator += nextChar;
+                        index++;
+                        continue;
+                    }
+                    break;
+                }
+                pushToken(tokens, "separator", separator);
+                continue;
+            }
+            buffer += char;
+        }
+        flushBuffer();
+        return tokens;
+    }
+    exports["default"] = tokenizePrompt;
+}).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
+        __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+
+
+/***/ }),
+
 /***/ "./client/synchroniseCurrentPrompts/createPromptObjects.ts":
-/*!*****************************************************************!*\
+/*!*****************************************************************!*
   !*** ./client/synchroniseCurrentPrompts/createPromptObjects.ts ***!
   \*****************************************************************/
 /***/ ((module, exports, __webpack_require__) => {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/Database/index */ "./client/Database/index.ts"), __webpack_require__(/*! client/const */ "./client/const.ts"), __webpack_require__(/*! client/utils/index */ "./client/utils/index.ts"), __webpack_require__(/*! client/managers/Config */ "./client/managers/Config/index.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, index_1, const_1, index_2, Config_1) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/Database/index */ "./client/Database/index.ts"), __webpack_require__(/*! client/const */ "./client/const.ts"), __webpack_require__(/*! client/utils/index */ "./client/utils/index.ts"), __webpack_require__(/*! client/managers/Config */ "./client/managers/Config/index.ts"), __webpack_require__(/*! ./tokenizePrompt */ "./client/synchroniseCurrentPrompts/tokenizePrompt.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, index_1, const_1, index_2, Config_1, tokenizePrompt_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", ({ value: true }));
+    function appendSeparator(activePrompts, separator, pendingSeparator) {
+        if (!separator)
+            return;
+        const previous = activePrompts[activePrompts.length - 1];
+        if (previous)
+            previous.separatorAfter = (previous.separatorAfter || "") + separator;
+        else
+            pendingSeparator.value += separator;
+    }
     function createPromptObjects({ value, activePrompts, groupId, nestingLevel = 0, normalize = false }) {
         const { data } = index_1.default;
         const { supportExtendedSyntax = true } = Config_1.default.getConfig();
-        const KEEP_SYNTAX_SYMBOLS = ["{", "}", "|"];
-        const DELIMITER_CHAR = ",";
-        const SPACE_CHAR = " ";
-        let prompts = [];
-        if (supportExtendedSyntax) {
-            prompts = value.split(/([,{}|])/g);
-            prompts = prompts.filter(strItem => strItem);
-            prompts = prompts.map((strItem, i, arr) => {
-                if (typeof strItem !== "string")
-                    return strItem;
-                let trimStr = strItem.trim();
-                if (KEEP_SYNTAX_SYMBOLS.includes(trimStr)) {
-                    const prevItem = i > 0 ? arr[i - 1] : "";
-                    const nextItem = arr[i + 1];
-                    if (prevItem && prevItem[prevItem.length - 1] === SPACE_CHAR)
-                        strItem = SPACE_CHAR + strItem;
-                    if (nextItem && nextItem[0] === SPACE_CHAR)
-                        strItem += SPACE_CHAR;
-                }
-                return strItem;
-            });
-            prompts = prompts.filter(strItem => strItem && strItem.trim());
-        }
-        else {
-            prompts = value.split(",");
-            prompts = prompts.filter(strItem => strItem && strItem.trim());
-        }
-        for (let i = 0; i < prompts.length; i++) {
-            let promptItem = prompts[i];
-            if (!promptItem)
+        const pendingSeparator = { value: "" };
+        const tokens = (0, tokenizePrompt_1.default)(value, supportExtendedSyntax);
+        for (const token of tokens) {
+            if (token.type === "separator") {
+                appendSeparator(activePrompts, token.value, pendingSeparator);
                 continue;
-            if (!promptItem || promptItem === ",")
-                continue;
-            const { id, weight, isExternalNetwork, isSyntax = false, nestedWeight } = (0, index_2.promptStringToObject)({ prompt: promptItem, nestedWeight: 0 });
+            }
+            let promptItem = token.value;
+            const { id, weight, isExternalNetwork, isSyntax = false } = (0, index_2.promptStringToObject)({ prompt: promptItem, nestedWeight: 0 });
             if (!id)
                 continue;
             promptItem = id;
-            if (normalize && !isExternalNetwork && !isSyntax)
+            const isBreak = token.type === "syntax" && token.value.trim() === "BREAK";
+            const isExtendedSyntax = token.type === "syntax" && !isBreak;
+            const syntax = isSyntax || token.type === "syntax";
+            if (normalize && !isExternalNetwork && !syntax)
                 promptItem = (0, index_2.normalizePrompt)({ prompt: promptItem, data });
             const targetItem = {
                 id: promptItem,
                 parentGroup: groupId,
                 weight: weight !== undefined ? weight : const_1.DEFAULT_PROMPT_WEIGHT
             };
+            if (pendingSeparator.value) {
+                targetItem.separatorBefore = pendingSeparator.value;
+                pendingSeparator.value = "";
+            }
             if (isExternalNetwork)
                 targetItem.isExternalNetwork = true;
-            /**
-             * If it is a syntax token - also checking if it needs delimiters on its sides in a string.
-             */
-            if (isSyntax) {
-                const prevItem = i > 0 ? prompts[i - 1] : "";
-                const nextItem = prompts[i + 1];
+            if (syntax) {
                 targetItem.isSyntax = true;
-                targetItem.delimiter = "none";
-                if (prevItem === DELIMITER_CHAR && nextItem === DELIMITER_CHAR)
-                    targetItem.delimiter = "both";
-                else if (prevItem === DELIMITER_CHAR)
-                    targetItem.delimiter = "prev";
-                else if (nextItem === DELIMITER_CHAR)
-                    targetItem.delimiter = "next";
+                if (isExtendedSyntax)
+                    targetItem.delimiter = "none";
             }
             activePrompts.push(targetItem);
         }
+        if (pendingSeparator.value)
+            appendSeparator(activePrompts, pendingSeparator.value, { value: "" });
     }
     exports["default"] = createPromptObjects;
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+        __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 
 /***/ }),
@@ -9996,7 +10147,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /***/ }),
 
 /***/ "./client/synchroniseCurrentPrompts/syncListToTextareaBranch.ts":
-/*!**********************************************************************!*\
+/*!**********************************************************************!*
   !*** ./client/synchroniseCurrentPrompts/syncListToTextareaBranch.ts ***!
   \**********************************************************************/
 /***/ ((module, exports, __webpack_require__) => {
@@ -10007,15 +10158,34 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
     function syncListToTextareaBranch(activePrompts, prompts = []) {
         for (const entity of activePrompts) {
             if ("groupId" in entity) {
-                prompts.push({ text: "(", src: { id: "(", isSyntax: true, delimiter: "prev" } });
+                prompts.push({
+                    text: "(",
+                    src: {
+                        id: "(",
+                        isSyntax: true,
+                        delimiter: "prev",
+                        separatorBefore: entity.separatorBefore,
+                    }
+                });
                 syncListToTextareaBranch(entity.prompts, prompts);
                 if (entity.weight)
                     prompts.push({ text: `: ${entity.weight}`, src: { id: "", isSyntax: true, delimiter: "none" } });
-                prompts.push({ text: ")", src: { id: ")", isSyntax: true, delimiter: "next" } });
+                prompts.push({
+                    text: ")",
+                    src: {
+                        id: ")",
+                        isSyntax: true,
+                        delimiter: "next",
+                        separatorAfter: entity.separatorAfter,
+                    }
+                });
                 continue;
             }
-            const { id, weight = const_1.DEFAULT_PROMPT_WEIGHT, isExternalNetwork } = entity;
-            if (isExternalNetwork) {
+            const { id, weight = const_1.DEFAULT_PROMPT_WEIGHT, isExternalNetwork, isSyntax } = entity;
+            if (isSyntax) {
+                prompts.push({ text: id, src: entity });
+            }
+            else if (isExternalNetwork) {
                 prompts.push({ text: `<${id}:${weight}>`, src: entity });
             }
             else {
@@ -10028,13 +10198,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
     }
     exports["default"] = syncListToTextareaBranch;
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+        __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 
 /***/ }),
 
 /***/ "./client/synchroniseCurrentPrompts/synchroniseListToTextarea.ts":
-/*!***********************************************************************!*\
+/*!***********************************************************************!*
   !*** ./client/synchroniseCurrentPrompts/synchroniseListToTextarea.ts ***!
   \***********************************************************************/
 /***/ ((module, exports, __webpack_require__) => {
@@ -10042,10 +10212,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/DOMCache */ "./client/DOMCache.ts"), __webpack_require__(/*! client/store */ "./client/store.ts"), __webpack_require__(/*! ./syncListToTextareaBranch */ "./client/synchroniseCurrentPrompts/syncListToTextareaBranch.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, DOMCache_1, store_1, syncListToTextareaBranch_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", ({ value: true }));
-    /**
-     * Synchronizes the lists of prompts as an array of objects for internal expansion operations
-     * and prompts located in the webpage Textarea element.
-     */
     function synchroniseListToTextarea(activePrompts) {
         const { currentContainer } = store_1.default.getState();
         const textArea = DOMCache_1.default.containers[currentContainer].textArea;
@@ -10058,9 +10224,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         for (let i = 0; i < prompts.length; i++) {
             const { text, src } = prompts[i];
             const nextPromptSrc = prompts[i + 1] ? prompts[i + 1].src : undefined;
+            if (src.separatorBefore !== undefined)
+                addTextValue += src.separatorBefore;
             addTextValue += text;
+            if (src.separatorAfter !== undefined) {
+                addTextValue += src.separatorAfter;
+                continue;
+            }
             let addDelimiter = true;
             if (!nextPromptSrc)
+                addDelimiter = false;
+            else if (nextPromptSrc.separatorBefore !== undefined)
                 addDelimiter = false;
             else if (src.delimiter) {
                 if (src.delimiter === "prev" || src.delimiter === "none")
@@ -10076,7 +10250,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                 addTextValue += ", ";
         }
         textArea.value = addTextValue;
-        //Just to be sure every api listening to changes in textarea done their job
         textArea.dispatchEvent(new Event('focus'));
         textArea.dispatchEvent(new Event('input'));
         textArea.dispatchEvent(new KeyboardEvent('keyup'));
@@ -10085,7 +10258,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
     }
     exports["default"] = synchroniseListToTextarea;
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
-		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+        __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 
 /***/ }),
@@ -10793,4 +10966,3 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /******/ 	
 /******/ })()
 ;
-//# sourceMappingURL=main.js.map

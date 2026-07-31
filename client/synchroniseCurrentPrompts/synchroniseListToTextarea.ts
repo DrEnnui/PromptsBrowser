@@ -22,11 +22,19 @@ export default function synchroniseListToTextarea(activePrompts: PromptEntity[])
     for(let i = 0; i < prompts.length; i++) {
         const {text, src} = prompts[i];
         const nextPromptSrc = prompts[i+1] ? prompts[i+1].src : undefined;
+
+        if(src.separatorBefore !== undefined) addTextValue += src.separatorBefore;
         addTextValue += text;
+
+        if(src.separatorAfter !== undefined) {
+            addTextValue += src.separatorAfter;
+            continue;
+        }
 
         let addDelimiter = true;
 
         if(!nextPromptSrc) addDelimiter = false;
+        else if(nextPromptSrc.separatorBefore !== undefined) addDelimiter = false;
         else if(src.delimiter) {
             if(src.delimiter === "prev" || src.delimiter === "none") addDelimiter = false;
 

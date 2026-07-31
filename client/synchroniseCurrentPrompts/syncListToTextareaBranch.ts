@@ -5,18 +5,37 @@ import Prompt, { PromptEntity } from "clientTypes/prompt";
 export default function syncListToTextareaBranch(activePrompts: PromptEntity[], prompts: {text: string; src: Prompt; }[] = []) {
     for(const entity of activePrompts) {
         if("groupId" in entity) {
-            prompts.push({text: "(", src: {id: "(", isSyntax: true, delimiter: "prev"}});
+            prompts.push({
+                text: "(",
+                src: {
+                    id: "(",
+                    isSyntax: true,
+                    delimiter: "prev",
+                    separatorBefore: entity.separatorBefore,
+                }
+            });
             syncListToTextareaBranch(entity.prompts, prompts);
 
             if(entity.weight) prompts.push({text: `: ${entity.weight}`, src: {id: "", isSyntax: true, delimiter: "none"}});
-            prompts.push({text: ")", src: {id: ")", isSyntax: true, delimiter: "next"}});
+            prompts.push({
+                text: ")",
+                src: {
+                    id: ")",
+                    isSyntax: true,
+                    delimiter: "next",
+                    separatorAfter: entity.separatorAfter,
+                }
+            });
 
             continue;
         }
 
-        const {id, weight = DEFAULT_PROMPT_WEIGHT, isExternalNetwork} = entity;
+        const {id, weight = DEFAULT_PROMPT_WEIGHT, isExternalNetwork, isSyntax} = entity;
 
-        if(isExternalNetwork) {
+        if(isSyntax) {
+            prompts.push({text: id, src: entity});
+
+        } else if(isExternalNetwork) {
             prompts.push({text: `<${id}:${weight}>`, src: entity});
 
         } else {

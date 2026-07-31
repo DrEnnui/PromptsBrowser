@@ -86,7 +86,7 @@ This extension modifies the DOM directly, without working through any API for su
 
 3. `Shift + click`: opens prompt edition window.
 
-4. `Ctrl/Meta + click`: opens the dialog of removing the prompt from the collection (it will be lost).
+5. `Ctrl/Meta + click`: opens the dialog of removing the prompt from the collection (it will be lost).
 
 5. Prompts in the collection can be moved by drag and drop.
 
@@ -98,15 +98,17 @@ This extension modifies the DOM directly, without working through any API for su
 
 1. Prompts can be added either manually via the text box or via the Prompt Browser.
 
-2. The order of the Prompts can be changed by dragging them with the mouse.
+2. The active-prompt visualization recognizes commas, semicolons, sentence-ending punctuation (`.`, `!`, `?`), line breaks, tabs, and the uppercase `BREAK` keyword. Original separators are preserved when card operations update the text box.
 
-3. `Shift + mouse wheel`: will change the weight of the Prompt depending on the direction of the mouse wheel.
+3. The order of the Prompts can be changed by dragging them with the mouse.
 
-4. `Ctrl/Meta + click`: deletes prompt from the active prompts.
+4. `Shift + mouse wheel`: will change the weight of the Prompt depending on the direction of the mouse wheel.
 
-5. `Double click`: opens the Prompt Tools.
+5. `Ctrl/Meta + click`: deletes prompt from the active prompts.
 
-6. `shift` + click: opens Prompt Editor.
+6. `Double click`: opens the Prompt Tools.
+
+7. `shift` + click: opens Prompt Editor.
 
 ### Active prompts groups
 

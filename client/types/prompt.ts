@@ -95,6 +95,12 @@ type PromptListItem = {
      */
     delimiter?: "none" | "prev" | "next" | "both";
 
+    /** Exact prompt text separator preserved after this visual entry. */
+    separatorAfter?: string;
+
+    /** Leading separator used only when the prompt starts with punctuation/whitespace. */
+    separatorBefore?: string;
+
 }
 
 type Prompt = PromptBase & PromptClient & PromptListItem;
@@ -112,6 +118,8 @@ type PromptGroup = {
     folded?: boolean;
     prompts: PromptEntity[];
     index?: number;
+    separatorAfter?: string;
+    separatorBefore?: string;
 }
 
 type PromptEntity = PromptGroup | Prompt;
