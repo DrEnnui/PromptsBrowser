@@ -8552,21 +8552,32 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 /***/ ((module, exports, __webpack_require__) => {
 
 var __webpack_unused_export__;
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/supportedContainers */ "./client/supportedContainers.ts"), __webpack_require__(/*! client/utils/index */ "./client/utils/index.ts"), __webpack_require__(/*! client/utils/gradioApp */ "./client/utils/gradioApp.ts"), __webpack_require__(/*! client/store */ "./client/store.ts"), __webpack_require__(/*! ./DOMCache */ "./client/DOMCache.ts"), __webpack_require__(/*! ./Database */ "./client/Database/index.ts"), __webpack_require__(/*! ./main/mountContainer */ "./client/main/mountContainer.ts"), __webpack_require__(/*! ./main/mountGlobal */ "./client/main/mountGlobal.ts"), __webpack_require__(/*! ./main/events/onChangeTab */ "./client/main/events/onChangeTab.ts"), __webpack_require__(/*! ./main/events/onDocumentKey */ "./client/main/events/onDocumentKey.ts"), __webpack_require__(/*! client/store */ "./client/store.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, supportedContainers_1, index_1, gradioApp_1, store_1, DOMCache_1, Database_1, mountContainer_1, mountGlobal_1, onChangeTab_1, onDocumentKey_1, store_2) {
+var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/supportedContainers */ "./client/supportedContainers.ts"), __webpack_require__(/*! client/utils/gradioApp */ "./client/utils/gradioApp.ts"), __webpack_require__(/*! client/store */ "./client/store.ts"), __webpack_require__(/*! ./DOMCache */ "./client/DOMCache.ts"), __webpack_require__(/*! ./Database */ "./client/Database/index.ts"), __webpack_require__(/*! ./main/mountContainer */ "./client/main/mountContainer.ts"), __webpack_require__(/*! ./main/mountGlobal */ "./client/main/mountGlobal.ts"), __webpack_require__(/*! ./main/events/onChangeTab */ "./client/main/events/onChangeTab.ts"), __webpack_require__(/*! ./main/events/onDocumentKey */ "./client/main/events/onDocumentKey.ts"), __webpack_require__(/*! client/store */ "./client/store.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, supportedContainers_1, gradioApp_1, store_1, DOMCache_1, Database_1, mountContainer_1, mountGlobal_1, onChangeTab_1, onDocumentKey_1, store_2) {
     "use strict";
     __webpack_unused_export__ = ({ value: true });
-    let timeoutPBUpdatePrompt = 0;
-    function tryToHook(tries = 0) {
+    let timeoutPBUpdatePrompt;
+    let promptsBrowserMounted = false;
+    let promptsBrowserInitialized = false;
+    function scheduleHookRetry() {
+        if (timeoutPBUpdatePrompt !== undefined)
+            clearTimeout(timeoutPBUpdatePrompt);
+        timeoutPBUpdatePrompt = setTimeout(tryToHook, 1000);
+    }
+    function tryToHook() {
+        if (promptsBrowserMounted)
+            return;
         const mainContainer = (0, gradioApp_1.default)();
-        if (tries > 100) {
-            (0, index_1.log)("No prompt wrapper container found or server did not returned prompts data.");
-            return;
-        }
         const checkContainer = mainContainer.querySelector("#txt2img_prompt_container");
-        if (!checkContainer) {
-            timeoutPBUpdatePrompt = setTimeout(() => tryToHook(tries + 1), 1000);
+        const tabsContainer = mainContainer.querySelector("#tabs > div:first-child");
+        // Forge can take longer than 100 seconds to finish building the UI.
+        // Keep waiting until all required containers exist instead of giving up.
+        if (!checkContainer || !tabsContainer) {
+            scheduleHookRetry();
             return;
         }
+        if (timeoutPBUpdatePrompt !== undefined)
+            clearTimeout(timeoutPBUpdatePrompt);
+        timeoutPBUpdatePrompt = undefined;
         DOMCache_1.default.mainContainer = mainContainer;
         //Automatic1111
         let modelCheckpoint = mainContainer.querySelector("#setting_sd_model_checkpoint");
@@ -8581,7 +8592,6 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             const inputElement = DOMCache_1.default.modelCheckpoint.querySelector("input");
             inputElement === null || inputElement === void 0 ? void 0 : inputElement.addEventListener("blur", store_2.iterateModel);
         }
-        const tabsContainer = mainContainer.querySelector("#tabs > div:first-child");
         tabsContainer.removeEventListener("click", onChangeTab_1.default);
         tabsContainer.addEventListener("click", onChangeTab_1.default);
         document.removeEventListener('keyup', onDocumentKey_1.default);
@@ -8589,12 +8599,22 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         for (const containerId in supportedContainers_1.default)
             (0, mountContainer_1.default)({ containerId, mainContainer });
         (0, mountGlobal_1.default)({ mainContainer });
+        promptsBrowserMounted = true;
     }
-    document.addEventListener('DOMContentLoaded', function () {
+    function initializePromptsBrowser() {
+        if (promptsBrowserInitialized)
+            return;
+        promptsBrowserInitialized = true;
         (0, store_1.loadUIConfig)();
         Database_1.default.load();
         tryToHook();
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializePromptsBrowser, { once: true });
+    }
+    else {
+        initializePromptsBrowser();
+    }
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
 		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
