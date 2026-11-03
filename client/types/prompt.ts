@@ -95,6 +95,9 @@ type PromptListItem = {
      */
     delimiter?: "none" | "prev" | "next" | "both";
 
+    /** Non-rendered # comment line, retained verbatim in the textarea. */
+    isComment?: boolean;
+
     /** Exact prompt text separator preserved after this visual entry. */
     separatorAfter?: string;
 
