@@ -120,6 +120,8 @@ This extension modifies the DOM directly, without working through any API for su
 
 7. `shift` + click: opens Prompt Editor.
 
+**Long card labels:** Names in the regular prompt cards wrap within the card and are clamped to six lines, so they cannot spill into ForgeNeo controls. Hovering still shows the larger preview, and the card's native title tooltip contains the full name. This is strictly a display change; prompt text, weights, and card operations are unchanged.
+
 ### Active prompts groups
 
 1. You can group prompts together by dragging one on top of the other while holding down the `shift` key.
