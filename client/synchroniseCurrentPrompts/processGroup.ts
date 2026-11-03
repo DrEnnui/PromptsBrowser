@@ -4,8 +4,9 @@ import { PromptEntity, PromptGroup } from "clientTypes/prompt";
 import createPromptObjects from "./createPromptObjects";
 
 
-export default function processGroup({entityArray, activePrompts, normalize = false, nestingLevel = 0, groupId = false}:{
+export default function processGroup({entityArray, comments, activePrompts, normalize = false, nestingLevel = 0, groupId = false}:{
     entityArray: PromptStringEntity[];
+    comments?: Map<string, string>;
     activePrompts: PromptEntity[];
     normalize: boolean;
     nestingLevel?: number;
@@ -15,6 +16,7 @@ export default function processGroup({entityArray, activePrompts, normalize = fa
         if(typeof entity === "string") {
             createPromptObjects({
                 value: entity,
+                comments,
                 normalize,
                 activePrompts,
                 nestingLevel,
@@ -34,6 +36,7 @@ export default function processGroup({entityArray, activePrompts, normalize = fa
             activePrompts.push(newGroup);
             processGroup({
                 entityArray: body,
+                comments,
                 activePrompts: newGroup.prompts,
                 normalize,
                 nestingLevel: nestingLevel + 1,
