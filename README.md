@@ -108,6 +108,8 @@ This extension modifies the DOM directly, without working through any API for su
 
 2. The active-prompt visualization recognizes commas, semicolons, sentence-ending punctuation (`.`, `!`, `?`), line breaks, tabs, and the uppercase `BREAK` keyword. Original separators are preserved when card operations update the text box.
 
+3. Entire lines starting with `#` (optionally indented) are **hidden from the active prompt cards**. The original comment text, punctuation, and newline stay in the prompt textarea when cards are edited or moved. An inline `#` does not begin a hidden line. **This is a visual-only feature:** the text is not removed from the prompt submitted to ForgeNeo, so do not assume `#` is a generation-time comment syntax.
+
 3. The order of the Prompts can be changed by dragging them with the mouse.
 
 4. `Shift + mouse wheel`: will change the weight of the Prompt depending on the direction of the mouse wheel.
