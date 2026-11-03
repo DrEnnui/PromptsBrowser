@@ -55,6 +55,7 @@ function PromptItem({id = "", src, prompt, options = {}, onClick, onDblClick, on
                 transform: weightStyle ? weightStyle.transform : "",
             }}
             data-prompt={id}
+            title={promptName}
             data-index={index + ""}
             data-group={parentGroup !== false ? parentGroup : undefined}
             data-issyntax={isSyntax ? "true" : ""}
@@ -78,7 +79,7 @@ function PromptItem({id = "", src, prompt, options = {}, onClick, onDblClick, on
                 <WeightContainer weight={weight} color={weightStyle ? weightStyle.color : ""} />
             }
 
-            {promptName}
+            <span className="PBE_promptElementLabel">{promptName}</span>
 
             {(!noSplash && !isSyntax) &&
                 <div
@@ -93,7 +94,7 @@ function PromptItem({id = "", src, prompt, options = {}, onClick, onDblClick, on
                     {weight !== DEFAULT_PROMPT_WEIGHT &&
                         <WeightContainer weight={weight} color={weightStyle ? weightStyle.color : ""} />
                     }
-                    {promptName}
+                    <span className="PBE_promptElementSplashLabel">{promptName}</span>
                 </div>
             }
         </div>
