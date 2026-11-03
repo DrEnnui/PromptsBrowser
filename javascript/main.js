@@ -4849,11 +4849,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                 height: `${cardHeight}px`,
                 zIndex: weightStyle ? weightStyle.zIndex : "",
                 transform: weightStyle ? weightStyle.transform : "",
-            }, "data-prompt": id, "data-index": index + "", "data-group": parentGroup !== false ? parentGroup : undefined, "data-issyntax": isSyntax ? "true" : "", onMouseOver: onMouseOver_1.default, onClick: onClick, onDoubleClick: onDblClick, onWheel: onWheel, draggable: allowMove, onDragStart: allowMove ? onDragStart_1.default : undefined, onDragOver: allowMove ? (e => e.preventDefault()) : undefined, onDragEnter: allowMove ? onDragEnter_1.default : undefined, onDragLeave: allowMove ? onDragLeave_1.default : undefined, onDrop: allowMove ? onDrop_1.default : undefined },
+            }, "data-prompt": id, title: promptName, "data-index": index + "", "data-group": parentGroup !== false ? parentGroup : undefined, "data-issyntax": isSyntax ? "true" : "", onMouseOver: onMouseOver_1.default, onClick: onClick, onDoubleClick: onDblClick, onWheel: onWheel, draggable: allowMove, onDragStart: allowMove ? onDragStart_1.default : undefined, onDragOver: allowMove ? (e => e.preventDefault()) : undefined, onDragEnter: allowMove ? onDragEnter_1.default : undefined, onDragLeave: allowMove ? onDragLeave_1.default : undefined, onDrop: allowMove ? onDrop_1.default : undefined },
             showIndex && React.createElement("div", { className: "PBE_promptElementIndex" }, index),
             weight !== const_1.DEFAULT_PROMPT_WEIGHT &&
                 React.createElement(WeightContainer_1.default, { weight: weight, color: weightStyle ? weightStyle.color : "" }),
-            promptName,
+            React.createElement("span", { className: "PBE_promptElementLabel" }, promptName),
             (!noSplash && !isSyntax) &&
                 React.createElement("div", { className: "PBE_promptElementSplash PBE_currentElement", style: {
                         backgroundImage: src,
@@ -4863,7 +4863,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                     } },
                     weight !== const_1.DEFAULT_PROMPT_WEIGHT &&
                         React.createElement(WeightContainer_1.default, { weight: weight, color: weightStyle ? weightStyle.color : "" }),
-                    promptName)));
+                    React.createElement("span", { className: "PBE_promptElementSplashLabel" }, promptName))));
     }
     exports["default"] = React.memo(PromptItem);
 }).apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__),
