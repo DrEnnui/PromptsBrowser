@@ -57,6 +57,10 @@ export default function getCards(props: {
             continue;
         }
 
+        // Comment lines stay in the underlying list for lossless serialization,
+        // but never appear as prompt cards (including nested groups).
+        if(promptItem.isComment) continue;
+
         //check filters
         if(filterSimple && !checkFilter(promptItem.id, filterSimple)) continue;
 
