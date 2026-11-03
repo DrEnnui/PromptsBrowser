@@ -6593,6 +6593,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                 JSXCards.push(React.createElement(GroupItem_1.default, { key: "group_" + promptItem.groupId, index: useIndex, group: promptItem, noWrap: noWrap, allowMove: allowMove, onClick: onClick, onWheel: onWheel }, groupCards));
                 continue;
             }
+            // Hash-prefixed comment lines are retained for serialization but hidden in the UI.
+            if (promptItem.isComment)
+                continue;
             //check filters
             if (filterSimple && !(0, PromptsSimpleFilter_1.checkFilter)(promptItem.id, filterSimple))
                 continue;
@@ -10011,7 +10014,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         else
             pendingSeparator.value += separator;
     }
-    function createPromptObjects({ value, activePrompts, groupId, nestingLevel = 0, normalize = false }) {
+    function createPromptObjects({ value, comments, activePrompts, groupId, nestingLevel = 0, normalize = false }) {
         const { data } = index_1.default;
         const { supportExtendedSyntax = true } = Config_1.default.getConfig();
         const pendingSeparator = { value: "" };
@@ -10019,6 +10022,21 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         for (const token of tokens) {
             if (token.type === "separator") {
                 appendSeparator(activePrompts, token.value, pendingSeparator);
+                continue;
+            }
+            const commentText = comments === null || comments === void 0 ? void 0 : comments.get(token.value.trim());
+            if (commentText !== undefined) {
+                const hiddenComment = {
+                    id: commentText,
+                    parentGroup: groupId,
+                    isComment: true,
+                    isSyntax: true,
+                };
+                if (pendingSeparator.value) {
+                    hiddenComment.separatorBefore = pendingSeparator.value;
+                    pendingSeparator.value = "";
+                }
+                activePrompts.push(hiddenComment);
                 continue;
             }
             let promptItem = token.value;
@@ -10086,11 +10104,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/managers/ActivePrompts/index */ "./client/managers/ActivePrompts/index.ts"), __webpack_require__(/*! ./createPromptObjects */ "./client/synchroniseCurrentPrompts/createPromptObjects.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, index_1, createPromptObjects_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", ({ value: true }));
-    function processGroup({ entityArray, activePrompts, normalize = false, nestingLevel = 0, groupId = false }) {
+    function processGroup({ entityArray, comments, activePrompts, normalize = false, nestingLevel = 0, groupId = false }) {
         for (const entity of entityArray) {
             if (typeof entity === "string") {
                 (0, createPromptObjects_1.default)({
                     value: entity,
+                    comments,
                     normalize,
                     activePrompts,
                     nestingLevel,
@@ -10108,6 +10127,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
                 activePrompts.push(newGroup);
                 processGroup({
                     entityArray: body,
+                    comments,
                     activePrompts: newGroup.prompts,
                     normalize,
                     nestingLevel: nestingLevel + 1,
@@ -10138,6 +10158,22 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports, __webpack_require__(/*! client/managers/ActivePrompts/index */ "./client/managers/ActivePrompts/index.ts"), __webpack_require__(/*! client/store */ "./client/store.ts"), __webpack_require__(/*! client/utils/parseGroups */ "./client/utils/parseGroups.ts"), __webpack_require__(/*! client/DOMCache */ "./client/DOMCache.ts"), __webpack_require__(/*! client/store */ "./client/store.ts"), __webpack_require__(/*! ./processGroup */ "./client/synchroniseCurrentPrompts/processGroup.ts")], __WEBPACK_AMD_DEFINE_RESULT__ = (function (require, exports, index_1, store_1, parseGroups_1, DOMCache_1, store_2, processGroup_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", ({ value: true }));
+    function maskCommentLines(value) {
+        const comments = new Map();
+        const parts = value.split(/(\r\n|\n|\r)/);
+        for (let index = 0; index < parts.length; index += 2) {
+            const line = parts[index];
+            if (!/^[ \t]*#/.test(line))
+                continue;
+            let marker = `PBECOMMENTLINETOKEN${index}`;
+            while (value.includes(marker))
+                marker += 'X';
+            comments.set(marker, line);
+            parts[index] = marker;
+        }
+        return { value: parts.join(''), comments };
+    }
+    exports.maskCommentLines = maskCommentLines;
     /**
      * Synchronises text content of the textarea with the array of active prompts used by the extension.
      * TODO: remove noTextAreaUpdate as it is relict from previous implementation.
@@ -10147,12 +10183,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
         const textArea = DOMCache_1.default.containers[currentContainer].textArea;
         if (!textArea)
             return;
-        let value = textArea.value;
+        const masked = maskCommentLines(textArea.value);
+        let value = masked.value;
         //trying to fix LORAs/Hypernetworks added without a preceding comma
         value = value.replace(/([^,])\ </g, "$1,\ <");
         const newActivePrompts = [];
         (0, processGroup_1.default)({
             entityArray: (0, parseGroups_1.parseGroups)(value),
+            comments: masked.comments,
             activePrompts: newActivePrompts,
             normalize,
         });
@@ -10246,6 +10284,16 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             const nextPromptSrc = prompts[i + 1] ? prompts[i + 1].src : undefined;
             if (src.separatorBefore !== undefined)
                 addTextValue += src.separatorBefore;
+            if (src.isComment) {
+                if (addTextValue && !/[\r\n]$/.test(addTextValue))
+                    addTextValue += "\n";
+                addTextValue += text;
+                if (src.separatorAfter !== undefined)
+                    addTextValue += src.separatorAfter;
+                if (nextPromptSrc && !/[\r\n]$/.test(addTextValue))
+                    addTextValue += "\n";
+                continue;
+            }
             addTextValue += text;
             if (src.separatorAfter !== undefined) {
                 addTextValue += src.separatorAfter;
@@ -10255,6 +10303,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_
             if (!nextPromptSrc)
                 addDelimiter = false;
             else if (nextPromptSrc.separatorBefore !== undefined)
+                addDelimiter = false;
+            else if (nextPromptSrc.isComment)
                 addDelimiter = false;
             else if (src.delimiter) {
                 if (src.delimiter === "prev" || src.delimiter === "none")
