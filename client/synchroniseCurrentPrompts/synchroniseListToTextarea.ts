@@ -24,6 +24,17 @@ export default function synchroniseListToTextarea(activePrompts: PromptEntity[])
         const nextPromptSrc = prompts[i+1] ? prompts[i+1].src : undefined;
 
         if(src.separatorBefore !== undefined) addTextValue += src.separatorBefore;
+
+        if(src.isComment) {
+            // Hidden comments must remain on their own physical line even if
+            // a visible card is reordered past them.
+            if(addTextValue && !/[\r\n]$/.test(addTextValue)) addTextValue += "\n";
+            addTextValue += text;
+            if(src.separatorAfter !== undefined) addTextValue += src.separatorAfter;
+            if(nextPromptSrc && !/[\r\n]$/.test(addTextValue)) addTextValue += "\n";
+            continue;
+        }
+
         addTextValue += text;
 
         if(src.separatorAfter !== undefined) {
@@ -35,6 +46,7 @@ export default function synchroniseListToTextarea(activePrompts: PromptEntity[])
 
         if(!nextPromptSrc) addDelimiter = false;
         else if(nextPromptSrc.separatorBefore !== undefined) addDelimiter = false;
+        else if(nextPromptSrc.isComment) addDelimiter = false;
         else if(src.delimiter) {
             if(src.delimiter === "prev" || src.delimiter === "none") addDelimiter = false;
 
