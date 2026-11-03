@@ -11,6 +11,14 @@ Status: **existing ForgeNeo installation works** (user-confirmed, November 2, 20
 - Primary objective: apply and validate our **custom active-prompt delimiter and card-editing behavior** against the already-functioning ForgeNeo extension, without disrupting its existing collections or features.
 - Secondary, optional objective: later share selected prompt data with v17 through an explicit file/schema interface. Do **not** couple the v17 engine to Gradio DOM or internal extension state.
 
+## Hash-prefixed comment lines (November 2, 2026)
+
+- Added support for hiding entire lines whose first non-space/tab character is `#` from the **active prompt card display**. Inline `#` stays ordinary text.
+- The lines are not deleted: they are masked before group parsing, represented as non-rendering inert nodes with original line text, and restored into the textarea when card actions serialize the list. Carriage returns/newlines and leading indentation are preserved.
+- The feature is **display only**; it does not strip text from ForgeNeo generation requests. Separately decide whether comments should be removed from submitted prompts if desired.
+- Updated both TypeScript sources and checked-in `javascript/main.js`, allowing users without npm to consume the change through Git.
+- Added regression tests for masking and line-safe reconstruction in `tests/hiddenCommentLines.test.cjs`.
+
 ## Existing work to preserve
 
 The delimiter branch adds `client/synchroniseCurrentPrompts/tokenizePrompt.ts` and updates parsing, prompt-object metadata, and textarea reconstruction. It supports top-level commas, semicolons, sentence punctuation, line breaks/tabs and standalone uppercase `BREAK` while preserving actual separators. Syntax inside parentheses, square brackets and angle brackets is intentionally protected. The branch also contains an updated compiled `javascript/main.js`; source changes must be rebuilt and the compiled bundle inspected before deployment.
