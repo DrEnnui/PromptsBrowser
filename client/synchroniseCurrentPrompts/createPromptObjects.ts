@@ -14,8 +14,9 @@ function appendSeparator(activePrompts: PromptEntity[], separator: string, pendi
     else pendingSeparator.value += separator;
 }
 
-export default function createPromptObjects({value, activePrompts, groupId, nestingLevel = 0, normalize = false}: {
+export default function createPromptObjects({value, comments, activePrompts, groupId, nestingLevel = 0, normalize = false}: {
     value: string;
+    comments?: Map<string, string>;
     activePrompts: PromptEntity[];
     normalize?: boolean;
     groupId: number | false;
@@ -29,6 +30,24 @@ export default function createPromptObjects({value, activePrompts, groupId, nest
     for(const token of tokens) {
         if(token.type === "separator") {
             appendSeparator(activePrompts, token.value, pendingSeparator);
+            continue;
+        }
+
+        // Restore a full comment line as an invisible, inert node. Keep its
+        // separators and array position so card operations do not delete it.
+        const commentText = comments?.get(token.value.trim());
+        if(commentText !== undefined) {
+            const hiddenComment: Prompt = {
+                id: commentText,
+                parentGroup: groupId,
+                isComment: true,
+                isSyntax: true,
+            };
+            if(pendingSeparator.value) {
+                hiddenComment.separatorBefore = pendingSeparator.value;
+                pendingSeparator.value = "";
+            }
+            activePrompts.push(hiddenComment);
             continue;
         }
 
