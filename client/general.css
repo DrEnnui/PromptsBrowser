@@ -350,6 +350,42 @@ select.PBE_generalInput {
     word-break: break-word;
 }
 
+/* Keep lengthy prompt names inside narrow cards rather than letting them
+   spill into the generation controls. The full name is still on the card's
+   title attribute and in the existing enlarged hover preview. */
+.PBE_promptElementLabel {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    white-space: normal;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-height: calc(100% - 4px);
+    padding: 2px;
+    line-height: 1.15;
+}
+
+.PBE_promptElementSplashLabel {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 12;
+    line-clamp: 12;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    white-space: normal;
+    box-sizing: border-box;
+    width: 100%;
+    max-height: 100%;
+    padding: 6px;
+    line-height: 1.15;
+}
+
 .PBE_promptElement_random {
     background-color: mediumaquamarine;
     background: linear-gradient(48deg, rgba(0,0,0,1) 0%, rgba(29,253,111,1) 47%, rgba(0,0,0,1) 100%);
